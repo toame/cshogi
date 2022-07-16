@@ -63,14 +63,14 @@ const HuffmanCode HuffmanCodedPos::boardCodeTable[PieceNone] = {
 
 // 盤上の bit 数 - 1 で表現出来るようにする。持ち駒があると、盤上には Empty の 1 bit が増えるので、
 // これで局面の bit 数が固定化される。
-const HuffmanCode HuffmanCodedPos::handCodeTable[HandPieceNum][ColorNum] = {
-    {{Binary<        0>::value, 3}, {Binary<      100>::value, 3}}, // HPawn
-    {{Binary<        1>::value, 5}, {Binary<    10001>::value, 5}}, // HLance
-    {{Binary<       11>::value, 5}, {Binary<    10011>::value, 5}}, // HKnight
-    {{Binary<      101>::value, 5}, {Binary<    10101>::value, 5}}, // HSilver
-    {{Binary<      111>::value, 5}, {Binary<    10111>::value, 5}}, // HGold
-    {{Binary<    11111>::value, 7}, {Binary<  1011111>::value, 7}}, // HBishop
-    {{Binary<   111111>::value, 7}, {Binary<  1111111>::value, 7}}, // HRook
+const HuffmanCode HuffmanCodedPos::handCodeTable[HandPieceNum][ExColorNum] = {
+    {{Binary<        0>::value, 3}, {Binary<      100>::value, 3}, {Binary<       10>::value, 3}, {Binary<      110>::value, 3}}, // HPawn
+    {{Binary<        1>::value, 5}, {Binary<    10001>::value, 5}, {Binary<     1001>::value, 5}, {Binary<    11001>::value, 5}}, // HLance
+    {{Binary<       11>::value, 5}, {Binary<    10011>::value, 5}, {Binary<     1011>::value, 5}, {Binary<    11011>::value, 5}}, // HKnight
+    {{Binary<      101>::value, 5}, {Binary<    10101>::value, 5}, {Binary<     1101>::value, 5}, {Binary<        0>::value, 0}}, // HSilver
+    {{Binary<      111>::value, 5}, {Binary<    10111>::value, 5}, {Binary<    11101>::value, 5}, {Binary<        0>::value, 0}}, // HGold
+    {{Binary<    11111>::value, 7}, {Binary<  1011111>::value, 7}, {Binary<     1111>::value, 7}, {Binary<  1001111>::value, 7}}, // HBishop
+    {{Binary<   111111>::value, 7}, {Binary<  1111111>::value, 7}, {Binary<   101111>::value, 7}, {Binary<  1101111>::value, 7}}, // HRook
 };
 
 HuffmanCodeToPieceHash HuffmanCodedPos::boardCodeToPieceHash;
@@ -144,14 +144,14 @@ const HuffmanCode PackedSfen::boardCodeTable[PieceNone] = {
 
 // 盤上の bit 数 - 1 で表現出来るようにする。持ち駒があると、盤上には Empty の 1 bit が増えるので、
 // これで局面の bit 数が固定化される。
-const HuffmanCode PackedSfen::handCodeTable[HandPieceNum][ColorNum] = {
-	{ { Binary<        0>::value, 3 },{ Binary<      100>::value, 3 } }, // HPawn
-	{ { Binary<        1>::value, 5 },{ Binary<    10001>::value, 5 } }, // HLance
-	{ { Binary<      101>::value, 5 },{ Binary<    10101>::value, 5 } }, // HKnight
-	{ { Binary<       11>::value, 5 },{ Binary<    10011>::value, 5 } }, // HSilver
-	{ { Binary<      111>::value, 5 },{ Binary<    10111>::value, 5 } }, // HGold
-	{ { Binary<     1111>::value, 7 },{ Binary<  1001111>::value, 7 } }, // HBishop
-	{ { Binary<    11111>::value, 7 },{ Binary<  1011111>::value, 7 } }, // HRook
+const HuffmanCode PackedSfen::handCodeTable[HandPieceNum][ExColorNum] = {
+    { { Binary<        0>::value, 3 },{ Binary<      100>::value, 3 },{ Binary<       10>::value, 3 },{ Binary<      110>::value, 3 } }, // HPawn
+    { { Binary<        1>::value, 5 },{ Binary<    10001>::value, 5 },{ Binary<     1001>::value, 5 },{ Binary<    11001>::value, 5 } }, // HLance
+    { { Binary<      101>::value, 5 },{ Binary<    10101>::value, 5 },{ Binary<     1101>::value, 5 },{ Binary<    11101>::value, 5 } }, // HKnight
+    { { Binary<       11>::value, 5 },{ Binary<    10011>::value, 5 },{ Binary<     1011>::value, 5 },{ Binary<        0>::value, 0 } }, // HSilver
+    { { Binary<      111>::value, 5 },{ Binary<    10111>::value, 5 },{ Binary<    11011>::value, 5 },{ Binary<        0>::value, 0 } }, // HGold
+    { { Binary<     1111>::value, 7 },{ Binary<  1001111>::value, 7 },{ Binary<   101111>::value, 7 },{ Binary<  1101111>::value, 7 } }, // HBishop
+    { { Binary<    11111>::value, 7 },{ Binary<  1011111>::value, 7 },{ Binary<   111111>::value, 7 },{ Binary<  1111111>::value, 7 } }, // HRook
 };
 
 HuffmanCodeToPieceHash PackedSfen::boardCodeToPieceHash;
@@ -2956,6 +2956,9 @@ void Position::toHuffmanCodedPos(u8* data) const {
     bs.putBits(kingSquare(Black), 7);
     bs.putBits(kingSquare(White), 7);
 
+    // 駒箱枚数
+    int32_t hp_count[8] = { 18, 4, 4, 4, 4, 2, 2, 0 };
+
     // 盤上の駒
     for (Square sq = SQ11; sq < SquareNum; ++sq) {
         Piece pc = piece(sq);
@@ -2963,6 +2966,7 @@ void Position::toHuffmanCodedPos(u8* data) const {
             continue;
         const auto hc = HuffmanCodedPos::boardCodeTable[pc];
         bs.putBits(hc.code, hc.numOfBits);
+        hp_count[pieceTypeToHandPiece(pieceToPieceType(pc))] -= 1;
     }
 
     // 持ち駒
@@ -2974,6 +2978,14 @@ void Position::toHuffmanCodedPos(u8* data) const {
                 bs.putBits(hc.code, hc.numOfBits);
         }
     }
+
+    // 駒箱
+    for (HandPiece hp = HPawn; hp < HandPieceNum; ++hp) {
+        const auto hc = HuffmanCodedPos::handCodeTable[hp][PieceBox];
+        for (int32_t n = 0; n < hp_count[hp]; ++n)
+            bs.putBits(hc.code, hc.numOfBits);
+    }
+
     assert(bs.curr() == 0);
 }
 
@@ -2987,6 +2999,9 @@ void Position::toPackedSfen(u8* data) const {
 	bs.putBits(kingSquare(Black), 7);
 	bs.putBits(kingSquare(White), 7);
 
+    // 駒箱枚数
+    int32_t hp_count[8] = { 18, 4, 4, 4, 4, 2, 2, 0 };
+
 	// 盤上の駒
 	for (Square sq = SQ11; sq < SquareNum; ++sq) {
 		Piece pc = piece(sq);
@@ -2994,6 +3009,7 @@ void Position::toPackedSfen(u8* data) const {
 			continue;
 		const auto hc = PackedSfen::boardCodeTable[pc];
 		bs.putBits(hc.code, hc.numOfBits);
+        hp_count[pieceTypeToHandPiece(pieceToPieceType(pc))] -= 1;
 	}
 
 	// 持ち駒
@@ -3005,6 +3021,13 @@ void Position::toPackedSfen(u8* data) const {
 				bs.putBits(hc.code, hc.numOfBits);
 		}
 	}
+
+    // 駒箱
+    for (HandPiece hp = HPawn; hp < HandPieceNum; ++hp) {
+        const auto hc = PackedSfen::handCodeTable[hp][PieceBox];
+        for (int32_t n = 0; n < hp_count[hp]; ++n)
+            bs.putBits(hc.code, hc.numOfBits);
+    }
 	assert(bs.curr() == 0);
 }
 
@@ -3316,6 +3339,8 @@ bool Position::set_hcp(const char* hcp_data) {
         while (hc.numOfBits <= 8) {
             hc.code |= bs.getBit() << hc.numOfBits++;
             const Piece pc = HuffmanCodedPos::handCodeToPieceHash.value(hc.key);
+            if (pc == Empty)
+                break;
             if (pc != PieceNone) {
                 hand_[pieceToColor(pc)].plusOne(pieceTypeToHandPiece(pieceToPieceType(pc)));
                 break;
@@ -3381,6 +3406,8 @@ bool Position::set_psfen(const char* psfen_data) {
 		while (hc.numOfBits <= 8) {
 			hc.code |= bs.getBit() << hc.numOfBits++;
 			const Piece pc = PackedSfen::handCodeToPieceHash.value(hc.key);
+            if (pc == Empty)
+                break;
 			if (pc != PieceNone) {
 				hand_[pieceToColor(pc)].plusOne(pieceTypeToHandPiece(pieceToPieceType(pc)));
 				break;
