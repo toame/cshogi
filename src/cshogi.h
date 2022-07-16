@@ -32,7 +32,7 @@ constexpr u32 MAX_PIECES_IN_HAND[] = {
 };
 constexpr u32 MAX_PIECES_IN_HAND_SUM = MAX_HPAWN_NUM + MAX_HLANCE_NUM + MAX_HKNIGHT_NUM + MAX_HSILVER_NUM + MAX_HGOLD_NUM + MAX_HBISHOP_NUM + MAX_HROOK_NUM;
 constexpr u32 MAX_FEATURES2_HAND_NUM = (int)ColorNum * MAX_PIECES_IN_HAND_SUM;
-constexpr u32 MAX_FEATURES2_NUM = MAX_FEATURES2_HAND_NUM + 1/*王手*/;
+constexpr u32 MAX_FEATURES2_NUM = MAX_FEATURES2_HAND_NUM + 1/*王手*/ + 1/*手番*/;
 
 // 移動の定数
 enum MOVE_DIRECTION {
@@ -371,6 +371,10 @@ public:
 				std::fill_n((*features2_hand)[c2][p], (int)SquareNum * num, 1);
 				p += MAX_PIECES_IN_HAND[hp];
 			}
+		}
+		// is turn
+		if (pos.turn() == Black) {
+			std::fill_n((*features2)[MAX_FEATURES2_HAND_NUM - 1], SquareNum, 1);
 		}
 
 		// is check
