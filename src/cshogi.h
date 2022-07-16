@@ -372,14 +372,14 @@ public:
 				p += MAX_PIECES_IN_HAND[hp];
 			}
 		}
-		// is turn
-		if (pos.turn() == Black) {
-			std::fill_n((*features2)[MAX_FEATURES2_HAND_NUM - 1], SquareNum, 1);
-		}
-
 		// is check
 		if (pos.inCheck()) {
 			std::fill_n((*features2)[MAX_FEATURES2_HAND_NUM], SquareNum, 1);
+		}
+
+		// is turn
+		if (pos.turn() == Black) {
+			std::fill_n((*features2)[MAX_FEATURES2_HAND_NUM + 1], SquareNum, 1);
 		}
 	}
 
